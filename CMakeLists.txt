@@ -5,9 +5,6 @@ set(CMAKE_CXX_STANDARD 17)
 
 include_directories(.)
 
-add_executable(hashmap.cpp
-        hashmap.h
-        hashmap_iterator.h
+add_executable(main
         main.cpp
-        test_settings.cpp
-        tests.cpp)
+)
