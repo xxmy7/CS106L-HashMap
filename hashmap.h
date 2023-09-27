@@ -233,7 +233,9 @@ public:
     * if a key is not found. Instead, it will create a K/M pair for that key with a default
     * mapped value. This function is also not const-correct, which you will fix in milestone 2.
     */
-    M &at(const K &key) const;
+    M &at(const K &key);
+
+    const M &at(const K &key) const;
 
     /*
     * Removes all K/M pairs the HashMap.
@@ -465,6 +467,18 @@ public:
 
     /* Milestone 2 headers (you need to declare these) */
     // TODO: declare headers for copy constructor/assignment, move constructor/assignment
+
+    // copy constructor
+    HashMap(const HashMap<K, M, H> &h);
+
+    // copy assignment operator
+    HashMap<K, M, H> &operator=(const HashMap<K, M, H> &h);
+
+    // move constructor
+    HashMap(HashMap<K, M, H> &&h) noexcept;
+
+    // move assignment operator
+    HashMap<K, M, H> &operator=(HashMap<K, M, H> &&h) noexcept;
 
 private:
     /*

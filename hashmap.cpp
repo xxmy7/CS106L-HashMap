@@ -41,7 +41,7 @@ inline size_t HashMap<K, M, H>::bucket_count() const {
 };
 
 template<typename K, typename M, typename H>
-M &HashMap<K, M, H>::at(const K &key) const {
+M &HashMap<K, M, H>::at(const K &key) {
     auto [prev, node_found] = find_node(key);
     if (node_found == nullptr) {
         throw std::out_of_range("HashMap<K, M, H>::at: key not found");
@@ -50,15 +50,28 @@ M &HashMap<K, M, H>::at(const K &key) const {
 }
 
 template<typename K, typename M, typename H>
+const M &HashMap<K, M, H>::at(const K &key) const {
+    //Reuse code of non-const at.
+    return static_cast<const M&>((const_cast<HashMap<K, M, H>*>(this))->at(key));
+}
+
+template<typename K, typename M, typename H>
 bool HashMap<K, M, H>::contains(const K &key) const {
     return find_node(key).second != nullptr;
 }
 
+// The original implementation does not really clear its content.
+// Here is fix
 template<typename K, typename M, typename H>
 void HashMap<K, M, H>::clear() {
     for (auto &curr: _buckets_array) {
         while (curr != nullptr) {
+            auto fdel = curr;
+            //Here we should make a real copy.
             curr = curr->next;
+            //Actually array[i] = array[i]->next;
+            //Move that away from array, which means from hash map.
+            delete fdel;
         }
     }
     _size = 0;
@@ -263,5 +276,73 @@ std::ostream &operator<<(std::ostream &os, const HashMap<K, M, H> &rhs) {
 }
 
 /* Begin Milestone 2: Special Member Functions */
+// copy constructor
+template<typename K, typename M, typename H>
+HashMap<K, M, H>::HashMap(const HashMap<K, M, H> &h) :HashMap(h.bucket_count(), h._hash_function) {
+    // 参照上面构造函数的例子可以利用委托函数进行部分参数的初始化，下面在插入复制对应的pair
+    for (auto bucket: h._buckets_array) {
+        while (bucket != nullptr) {
+            this->insert(bucket->value); // insert里面会修改增加 _size
+            bucket = bucket->next;
+        }
+    }
+}
+
+// copy assignment operator
+template<typename K, typename M, typename H>
+HashMap<K, M, H>& HashMap<K, M, H>:: operator = (const HashMap<K, M, H>& rhs){
+    if(this == &rhs){ // 不能自己赋值给自己
+        return *this;
+    }
+    // 将之前的内容清除
+    clear();
+    // 复制成员变量
+    this->_size = 0;
+    this->_hash_function = rhs._hash_function;
+    // 这里要注意分配一个新数组，因为原对象可能_buckets_array为null
+    std::vector<node*> new_bucket_array(rhs._size, nullptr);
+    this->_buckets_array = std::move(new_bucket_array);
+    // 将目标对象的值逐个插入
+    for (auto bucket : rhs._buckets_array) {
+        while (bucket != nullptr) {
+            this->insert(bucket->value);
+            bucket = bucket->next;
+        }
+    }
+    return *this;
+}
+
+// move constructor
+template <typename K, typename M, typename H>
+HashMap<K, M, H>::HashMap(HashMap<K, M, H>&& h) noexcept:
+        _size(std::move(h._size)),
+        _hash_function(std::move(h._hash_function)),
+        _buckets_array(std::move(h._buckets_array)){
+    // 将被move的对象的资源拥有设置为一个有效但未指定的状态，以防止被move对象之后调用析构函数将资源释放
+    for (auto& bucket : h._buckets_array) {
+        bucket = nullptr;
+    }
+}
+
+// move assignment operator
+template <typename K, typename M, typename H>
+HashMap<K, M, H>& HashMap<K, M, H>::operator = (HashMap<K, M, H>&& rhs) noexcept{
+    if(this == &rhs){ // 不能自己赋值给自己
+        return *this;
+    }
+    // 将之前的内容清除
+    clear();
+    // 成员变量分别进行move
+    this->_size = std::move(rhs._size);
+    this->_hash_function = std::move(rhs._hash_function);
+    this->_buckets_array = std::move(rhs._buckets_array);
+
+    // 将被move的对象的资源拥有设置为一个有效但未指定的状态，以防止被move对象之后调用析构函数将资源释放
+    for (auto& bucket : rhs._buckets_array) {
+        bucket = nullptr;
+    }
+
+    return *this;
+}
 
 /* end student code */
